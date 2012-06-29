@@ -17,6 +17,10 @@ trait RpmPlugin extends Plugin with LinuxPlugin {
     rpmGroup := None,
     rpmPackager := None,
     rpmIcon := None,
+    rpmPreInstall := None,
+    rpmPostInstall := None,
+    rpmPreRemove := None,
+    rpmPostRemove := None,
     rpmProvides := Seq.empty,
     rpmRequirements := Seq.empty,
     rpmPrerequisites := Seq.empty,
@@ -28,12 +32,14 @@ trait RpmPlugin extends Plugin with LinuxPlugin {
     packageArchitecture := "noarch",
     rpmMetadata <<=
       (name, version, rpmRelease, packageArchitecture, rpmVendor, rpmOs, packageSummary, packageDescription) apply (RpmMetadata.apply),
+    rpmScripts <<=
+      (rpmPreInstall, rpmPostInstall, rpmPreRemove, rpmPostRemove) apply RpmScripts,
     rpmDescription <<=
-      (rpmLicense, rpmDistribution, rpmUrl, rpmGroup, rpmPackager, rpmIcon) apply RpmDescription,
+      (rpmLicense, rpmDistribution, rpmUrl, rpmGroup, rpmPackager, rpmIcon) apply (RpmDescription.apply),
     rpmDependencies <<=
       (rpmProvides, rpmRequirements, rpmPrerequisites, rpmObsoletes, rpmConflicts) apply RpmDependencies,
     rpmSpecConfig <<=
-      (rpmMetadata, rpmDescription, rpmDependencies, linuxPackageMappings) map RpmSpec,
+      (rpmMetadata, rpmDescription, rpmDependencies, linuxPackageMappings, rpmScripts) map RpmSpec,
     packageBin <<= (rpmSpecConfig, target, streams) map { (spec, dir, s) =>
         RpmHelper.buildRpm(spec, dir, s.log)
     },

@@ -47,11 +47,41 @@ case class RpmDependencies(
   }
 }
 
-case class RpmSpec(meta: RpmMetadata, 
-    desc: RpmDescription = RpmDescription(), 
+case class RpmScripts(
+    preInstall: Option[File] = None,
+    postInstall: Option[File] = None,
+    preRemove: Option[File] = None,
+    postRemove: Option[File] = None
+    ) {
+  private[this] def section(section: String, script: Option[File]): String = script match {
+    case Some(script) if script.isFile => {
+        val sb = new StringBuilder
+        sb append ("\n%%%s\n" format section)
+        for (line <- io.Source.fromFile(script).getLines) {
+            sb append line
+            sb append "\n"
+        }
+        sb.toString
+    }
+    case _ => ""
+  }
+
+  def contents: String = {
+    val sb = new StringBuilder
+    sb append section("pre", preInstall)
+    sb append section("post", postInstall)
+    sb append section("preun", preRemove)
+    sb append section("postun", postRemove)
+    sb.toString
+  }
+}
+
+case class RpmSpec(meta: RpmMetadata,
+    desc: RpmDescription = RpmDescription(),
     deps: RpmDependencies = RpmDependencies(),
-    mappings: Seq[LinuxPackageMapping] = Seq.empty) {
-  
+    mappings: Seq[LinuxPackageMapping] = Seq.empty,
+    scripts: RpmScripts = RpmScripts()) {
+
   private[this] def makeFilesLine(target: String, meta: LinuxFileMetaData, isDir: Boolean): String = {
     val sb = new StringBuilder
     meta.config.toLowerCase match {
@@ -101,7 +131,7 @@ case class RpmSpec(meta: RpmMetadata,
     sb append "fi\n"
     sb.toString
   }
-  
+
   // TODO - This is *very* tied to RPM helper, may belong *in* RpmHelper
   def writeSpec(rpmRoot: File, tmpRoot: File): String = {
     val sb = new StringBuilder
@@ -133,7 +163,8 @@ case class RpmSpec(meta: RpmMetadata,
     sb append installSection(tmpRoot)
     // TODO - Allow symlinks
     // TODO - Allow scriptlets for installation
-    // "%prep", "%pretrans", "%pre", "%post", "%preun", "%postun", "%posttrans", "%verifyscript", "%clean"
+    // "%prep", "%pretrans", "%posttrans", "%verifyscript", "%clean"
+    sb append scripts.contents
     // Write file mappings
     sb append fileSection
     // TODO - Write triggers...

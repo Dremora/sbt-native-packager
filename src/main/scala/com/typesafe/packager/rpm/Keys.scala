@@ -21,7 +21,14 @@ trait RpmKeys {
   val rpmPackager = SettingKey[Option[String]]("rpm-packger", "Person who packaged this rpm.")
   val rpmIcon = SettingKey[Option[String]]("rpm-icon", "name of the icon to use with this RPM.")
   val rpmDescription = SettingKey[RpmDescription]("rpm-description", "Description of this rpm.")
-  
+
+  // SCRIPT KEYS
+  val rpmPreInstall = SettingKey[Option[File]]("rpm-preinstall", "Pre-install script file")
+  val rpmPostInstall = SettingKey[Option[File]]("rpm-postinstall", "Post-install script file")
+  val rpmPreRemove = SettingKey[Option[File]]("rpm-preremove", "Pre-remove script file")
+  val rpmPostRemove = SettingKey[Option[File]]("rpm-postremove", "Post-remove script file")
+  val rpmScripts = SettingKey[RpmScripts]("rpm-scripts", "Configuration of custom scripts")
+
   // DEPENDENCIES
   val rpmProvides = SettingKey[Seq[String]]("rpm-provides", "Packages this RPM provides.")
   val rpmRequirements = SettingKey[Seq[String]]("rpm-requirements", "Packages this RPM requires.")
