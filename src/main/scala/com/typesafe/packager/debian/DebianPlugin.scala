@@ -3,7 +3,6 @@ package debian
 
 import Keys._
 import sbt._
-import sbt.Keys.sourceFilter
 import com.typesafe.packager.linux.LinuxPackageMapping
 import com.typesafe.packager.linux.LinuxFileMetaData
 
@@ -58,7 +57,27 @@ trait DebianPlugin extends Plugin with linux.LinuxPlugin {
         IO.write(cfile, data.makeContent(size), java.nio.charset.Charset.defaultCharset)
         cfile
     },
-    debianExplodedPackage <<= (linuxPackageMappings, debianControlFile, target) map { (mappings, _, t) =>
+    debianConffilesFile <<= (linuxPackageMappings, target) map {
+      (mappings, dir) =>
+        val cfile = dir / "DEBIAN" / "conffiles"
+        val conffiles = for {
+           LinuxPackageMapping(files, meta, _) <- mappings
+           if meta.config != "false"
+           (file, name) <- files
+           if file.isFile
+        } yield name
+        IO.writeLines(cfile, conffiles)
+        cfile
+    },
+    debianExplodedPackage <<= (linuxPackageMappings, debianControlFile, debianConffilesFile, target) map { (mappings, _, _, t) =>
+      // First Create directories, in case we have any without files in them.
+      for {
+        LinuxPackageMapping(files, perms, zipped) <- mappings
+        (file, name) <- files
+        if file.isDirectory
+        tfile = t / name   
+        if !tfile.exists     
+      } tfile.mkdirs()
       for {
         LinuxPackageMapping(files, perms, zipped) <- mappings
         (file, name) <- files
@@ -69,7 +88,20 @@ trait DebianPlugin extends Plugin with linux.LinuxPlugin {
       for(file <- (t.***).get; if file.isDirectory) chmod(file, "0755")
       t
     },
-    packageBin <<= (debianExplodedPackage, target, streams) map { (pkgdir, tdir, s) =>
+    debianMD5sumsFile <<= (debianExplodedPackage, target) map {
+      (mappings, dir) =>
+        val md5file = dir / "DEBIAN" / "md5sums"
+        val md5sums = for {
+          (file, name) <- (dir.*** --- dir x relativeTo(dir))
+          if file.isFile
+          if !(name startsWith "DEBIAN")
+          if !(name contains "debian-binary")
+          fixedName = if(name startsWith "/") name drop 1 else name
+        } yield Hashing.md5Sum(file) + "  " + fixedName
+        IO.writeLines(md5file, md5sums)
+        md5file
+    },
+    packageBin <<= (debianExplodedPackage, debianMD5sumsFile, target, streams) map { (pkgdir, _, tdir, s) =>
        // Make the phackage.  We put this in fakeroot, so we can build the package with root owning files.
        Process(Seq("fakeroot", "--", "dpkg-deb", "--build", pkgdir.getAbsolutePath), Some(tdir)) ! s.log match {
          case 0 => ()

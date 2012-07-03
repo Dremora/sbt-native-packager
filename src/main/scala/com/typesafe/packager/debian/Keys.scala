@@ -15,6 +15,8 @@ trait DebianKeys {
   val debianPackageMetadata = SettingKey[PackageMetaData]("debian-package-metadata", "Meta data used when constructing a debian package.")
   // Package building
   val debianControlFile = TaskKey[File]("debian-control-file", "Makes the debian package control file.")
+  val debianConffilesFile = TaskKey[File]("debian-conffiles-file", "Makes the debian package conffiles file.")
+  val debianMD5sumsFile = TaskKey[File]("debian-md5sums-file", "Makes the debian package md5sums file.")
   val debianZippedMappings = TaskKey[Seq[LinuxPackageMapping]]("debian-zipped-mappings", "Files that need to be gzipped when they hit debian.")
   val debianCombinedMappings = TaskKey[Seq[LinuxPackageMapping]]("debian-combined-mappings", "All the mappings of files for the final package.")
   val debianExplodedPackage = TaskKey[File]("debian-exploded-package", "makes an exploded debian package")
